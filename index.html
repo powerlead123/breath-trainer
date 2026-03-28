@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#fff6ed" />
+  <title>呼吸训练</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="page-shell">
+    <header class="hero">
+      <div class="hero-main">
+        <p class="eyebrow">Breath Loop Trainer</p>
+        <h1>呼吸训练闭环动画</h1>
+        <p class="hero-copy">
+          按秒设置吸气、停顿、呼气、停顿时间，循环计时与计次，并在每一段开始时发出声音提醒。
+        </p>
+      </div>
+      <div class="hero-tools">
+        <button id="themeToggle" class="theme-toggle" type="button" aria-pressed="false">
+          深色模式
+        </button>
+        <div class="hero-badge">
+          <span>动态闭环</span>
+          <strong id="shapeLabel">正方形</strong>
+        </div>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="panel controls-panel">
+        <h2>训练设置</h2>
+        <div class="field-grid">
+          <label class="field">
+            <span>吸气（秒）</span>
+            <input id="inhaleInput" type="number" min="1" step="1" value="4" />
+          </label>
+          <label class="field">
+            <span>停顿（秒）</span>
+            <input id="holdInInput" type="number" min="0" step="1" value="4" />
+          </label>
+          <label class="field">
+            <span>呼气（秒）</span>
+            <input id="exhaleInput" type="number" min="1" step="1" value="4" />
+          </label>
+          <label class="field">
+            <span>停顿（秒）</span>
+            <input id="holdOutInput" type="number" min="0" step="1" value="4" />
+          </label>
+          <label class="field field-wide">
+            <span>停止时间（分钟，填 0 为无限）</span>
+            <input id="durationInput" type="number" min="0" step="1" value="5" />
+          </label>
+        </div>
+
+        <div class="actions">
+          <button id="startButton" class="button button-primary">开始</button>
+          <button id="pauseButton" class="button button-secondary">暂停</button>
+          <button id="resetButton" class="button button-ghost">重置</button>
+        </div>
+
+        <p class="hint" id="shapeHint">
+          当前四段时长相等，因此会显示一个正方形闭环。
+        </p>
+      </section>
+
+      <section class="panel status-panel">
+        <div class="status-header">
+          <h2>训练状态</h2>
+          <div class="phase-chip" id="phaseChip">待开始</div>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card">
+            <span>当前阶段剩余</span>
+            <strong id="phaseRemaining">00:00</strong>
+          </div>
+          <div class="stat-card">
+            <span>总已训练</span>
+            <strong id="elapsedTime">00:00</strong>
+          </div>
+          <div class="stat-card">
+            <span>已完成循环</span>
+            <strong id="cycleCount">0</strong>
+          </div>
+          <div class="stat-card">
+            <span>单轮总时长</span>
+            <strong id="cycleDuration">16 秒</strong>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel visual-panel">
+        <div class="visual-head">
+          <div>
+            <h2>闭环图形</h2>
+            <p>四段路径会用舒缓暖色区分，细线动画会跟随当前呼吸进度沿闭环推进。</p>
+          </div>
+          <div class="legend">
+            <span><i class="dot inhale"></i>吸气</span>
+            <span><i class="dot hold-in"></i>吸后停顿</span>
+            <span><i class="dot exhale"></i>呼气</span>
+            <span><i class="dot hold-out"></i>呼后停顿</span>
+          </div>
+        </div>
+
+        <div class="canvas-wrap">
+          <svg id="breathSvg" viewBox="0 0 100 100" aria-label="呼吸训练闭环图形">
+            <path id="basePath" class="base-path" d="" />
+            <path id="segmentPath0" class="segment-path segment-inhale" d="" />
+            <path id="segmentPath1" class="segment-path segment-hold-in" d="" />
+            <path id="segmentPath2" class="segment-path segment-exhale" d="" />
+            <path id="segmentPath3" class="segment-path segment-hold-out" d="" />
+            <path id="phasePath" class="phase-path" d="" />
+            <circle id="progressDot" class="progress-dot" cx="50" cy="50" r="2.6" />
+          </svg>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="./script.js"></script>
+</body>
+</html>
