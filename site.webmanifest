@@ -1,0 +1,18 @@
+{
+  "name": "呼吸训练闭环动画",
+  "short_name": "呼吸训练",
+  "description": "可自定义吸气、停顿、呼气节奏的呼吸训练网页。",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#fff6ed",
+  "theme_color": "#fff6ed",
+  "lang": "zh-CN",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

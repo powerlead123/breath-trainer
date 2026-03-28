@@ -4,10 +4,24 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#fff6ed" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="呼吸训练" />
   <title>呼吸训练</title>
+  <link rel="apple-touch-icon" href="./icon.svg" />
+  <link rel="manifest" href="./site.webmanifest" />
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
+  <div id="launchScreen" class="launch-screen" aria-hidden="true">
+    <div class="launch-card">
+      <div class="launch-mark">呼吸</div>
+      <p>静下来，跟着节奏呼吸</p>
+    </div>
+  </div>
+  <div id="connectionBanner" class="connection-banner" hidden>
+    当前处于离线模式，页面仍可使用；若你刚更新代码，可能需要刷新一次以获取新版本。
+  </div>
   <div class="page-shell">
     <header class="hero">
       <div class="hero-main">
@@ -34,23 +48,23 @@
         <div class="field-grid">
           <label class="field">
             <span>吸气（秒）</span>
-            <input id="inhaleInput" type="number" min="1" step="1" value="4" />
+            <select id="inhaleInput"></select>
           </label>
           <label class="field">
-            <span>停顿（秒）</span>
-            <input id="holdInInput" type="number" min="0" step="1" value="4" />
+            <span>吸后停顿（秒）</span>
+            <select id="holdInInput"></select>
           </label>
           <label class="field">
             <span>呼气（秒）</span>
-            <input id="exhaleInput" type="number" min="1" step="1" value="4" />
+            <select id="exhaleInput"></select>
           </label>
           <label class="field">
-            <span>停顿（秒）</span>
-            <input id="holdOutInput" type="number" min="0" step="1" value="4" />
+            <span>呼后停顿（秒）</span>
+            <select id="holdOutInput"></select>
           </label>
           <label class="field field-wide">
             <span>停止时间（分钟，填 0 为无限）</span>
-            <input id="durationInput" type="number" min="0" step="1" value="5" />
+            <select id="durationInput"></select>
           </label>
         </div>
 
@@ -59,6 +73,30 @@
           <button id="pauseButton" class="button button-secondary">暂停</button>
           <button id="resetButton" class="button button-ghost">重置</button>
         </div>
+
+        <section class="feature-box">
+          <div class="feature-actions">
+            <button id="wakeLockButton" class="button button-secondary" type="button">开启常亮保护</button>
+            <button id="installButton" class="button button-ghost" type="button">安装到手机</button>
+          </div>
+          <p class="hint compact" id="wakeLockHint">
+            为了让提醒音尽量持续，建议开启常亮保护并从主屏幕启动。iPhone 真正锁屏后，Safari 仍可能暂停网页计时。
+          </p>
+          <p class="hint compact" id="installHint">
+            iPhone Safari 可用“分享”→“添加到主屏幕”安装；其他浏览器会在支持时显示安装入口。
+          </p>
+          <p class="hint compact" id="standaloneHint">
+            从 iPhone 主屏启动时会更像 App，顶部状态栏和页面边距也会更贴合手机使用。
+          </p>
+        </section>
+
+        <section class="preset-section">
+          <div class="preset-head">
+            <h3>预设方案</h3>
+            <button id="savePresetButton" class="button button-ghost small" type="button">保存当前方案</button>
+          </div>
+          <div id="presetList" class="preset-list"></div>
+        </section>
 
         <p class="hint" id="shapeHint">
           当前四段时长相等，因此会显示一个正方形闭环。
@@ -113,6 +151,10 @@
             <path id="segmentPath2" class="segment-path segment-exhale" d="" />
             <path id="segmentPath3" class="segment-path segment-hold-out" d="" />
             <path id="phasePath" class="phase-path" d="" />
+            <circle id="originDot0" class="origin-dot origin-inhale" cx="50" cy="50" r="1.5" />
+            <circle id="originDot1" class="origin-dot origin-hold-in" cx="50" cy="50" r="1.5" />
+            <circle id="originDot2" class="origin-dot origin-exhale" cx="50" cy="50" r="1.5" />
+            <circle id="originDot3" class="origin-dot origin-hold-out" cx="50" cy="50" r="1.5" />
             <circle id="progressDot" class="progress-dot" cx="50" cy="50" r="2.6" />
           </svg>
         </div>
