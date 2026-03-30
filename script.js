@@ -130,19 +130,20 @@ function buildShapeData(config, minuteIndex = 0) {
 }
 
 function buildPetalPoints(random) {
-  const count = 96;
+  const count = 144;
   const petals = 4 + Math.floor(random() * 4);
-  const twist = 0.5 + random() * 0.75;
+  const phase = random() * Math.PI * 2;
+  const softness = 0.12 + random() * 0.08;
+  const stretchX = 0.92 + random() * 0.12;
+  const stretchY = 0.92 + random() * 0.12;
   const points = [];
 
   for (let index = 0; index < count; index += 1) {
     const t = index / count;
     const angle = -Math.PI / 2 + t * Math.PI * 2;
-    const bloom = 0.62 + 0.28 * Math.sin(angle * petals + twist);
-    const innerRipple = 0.1 * Math.sin(angle * petals * 2 - twist * 0.6);
-    const radius = 28 + (bloom + innerRipple) * 16 + random() * 1.2;
-    const stretchX = 0.92 + random() * 0.18;
-    const stretchY = 0.92 + random() * 0.2;
+    const bloom = 1 + 0.24 * Math.sin(angle * petals + phase);
+    const innerRipple = softness * Math.sin(angle * petals * 2 + phase * 0.6);
+    const radius = 31 + bloom * 9 + innerRipple * 10;
     points.push({
       x: Math.cos(angle) * radius * stretchX,
       y: Math.sin(angle) * radius * stretchY
@@ -153,22 +154,25 @@ function buildPetalPoints(random) {
 }
 
 function buildInkPoints(random) {
-  const count = 84;
-  const lobes = 5 + Math.floor(random() * 3);
-  const smear = 0.18 + random() * 0.18;
+  const count = 132;
+  const lobeA = 3 + Math.floor(random() * 3);
+  const lobeB = lobeA + 1;
+  const phaseA = random() * Math.PI * 2;
+  const phaseB = random() * Math.PI * 2;
+  const stretchX = 0.94 + random() * 0.14;
+  const stretchY = 0.94 + random() * 0.14;
   const points = [];
 
   for (let index = 0; index < count; index += 1) {
     const t = index / count;
     const angle = -Math.PI / 2 + t * Math.PI * 2;
-    const pulseA = Math.sin(angle * lobes + random() * 0.12);
-    const pulseB = Math.sin(angle * (lobes + 2) - 1.2);
-    const radius = 26 + pulseA * 8 + pulseB * 5 + Math.sin(angle * 2.3) * 4;
-    const driftX = Math.cos(angle * 3.1) * smear * 18;
-    const driftY = Math.sin(angle * 2.7) * smear * 16;
+    const pulseA = Math.sin(angle * lobeA + phaseA);
+    const pulseB = Math.sin(angle * lobeB - phaseB);
+    const pulseC = Math.cos(angle * 2 + phaseA * 0.5);
+    const radius = 30 + pulseA * 6 + pulseB * 3.5 + pulseC * 2.5;
     points.push({
-      x: Math.cos(angle) * radius + driftX,
-      y: Math.sin(angle) * radius + driftY
+      x: Math.cos(angle) * radius * stretchX,
+      y: Math.sin(angle) * radius * stretchY
     });
   }
 
@@ -176,21 +180,23 @@ function buildInkPoints(random) {
 }
 
 function buildFlowPoints(random) {
-  const count = 90;
-  const waves = 3 + Math.floor(random() * 3);
-  const swirl = 0.65 + random() * 0.5;
+  const count = 140;
+  const waves = 2 + Math.floor(random() * 2);
+  const swirl = 0.45 + random() * 0.4;
+  const phase = random() * Math.PI * 2;
+  const drift = 3 + random() * 3;
   const points = [];
 
   for (let index = 0; index < count; index += 1) {
     const t = index / count;
     const angle = -Math.PI / 2 + t * Math.PI * 2;
-    const longWave = Math.sin(angle * waves - swirl) * 10;
-    const shortWave = Math.cos(angle * (waves + 2) + swirl * 1.7) * 4.5;
-    const radius = 29 + longWave + shortWave;
-    const curl = 5.5 * Math.sin(angle * 2 + swirl);
+    const longWave = Math.sin(angle * waves + phase) * 7.5;
+    const shortWave = Math.cos(angle * (waves + 1) - phase * 0.7) * 2.8;
+    const radius = 32 + longWave + shortWave;
+    const curl = drift * Math.sin(angle * 2 + swirl);
     points.push({
-      x: Math.cos(angle) * radius + Math.cos(angle * 1.5) * curl,
-      y: Math.sin(angle) * radius + Math.sin(angle * 1.2) * curl * 0.9
+      x: Math.cos(angle) * radius + Math.cos(angle + phase * 0.35) * curl,
+      y: Math.sin(angle) * radius + Math.sin(angle + phase * 0.2) * curl * 0.75
     });
   }
 
