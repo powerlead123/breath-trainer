@@ -37,7 +37,7 @@
         </button>
         <div class="hero-badge">
           <span>动态闭环</span>
-          <strong id="shapeLabel">正方形</strong>
+          <strong id="shapeLabel">随机闭环</strong>
         </div>
       </div>
     </header>
@@ -99,7 +99,7 @@
         </section>
 
         <p class="hint" id="shapeHint">
-          当前四段时长相等，因此会显示一个正方形闭环。
+          每满 1 分钟会切换一张新的随机闭环图案，四段颜色会按呼吸阶段持续循环。
         </p>
       </section>
 
@@ -133,7 +133,7 @@
         <div class="visual-head">
           <div>
             <h2>闭环图形</h2>
-            <p>四段路径会用舒缓暖色区分，细线动画会跟随当前呼吸进度沿闭环推进。</p>
+            <p>系统会每满 1 分钟换一张新的随机闭环图案，四段颜色会随着呼吸节奏在图案上循环推进。</p>
           </div>
           <div class="legend">
             <span><i class="dot inhale"></i>吸气</span>
@@ -151,10 +151,6 @@
             <path id="segmentPath2" class="segment-path segment-exhale" d="" />
             <path id="segmentPath3" class="segment-path segment-hold-out" d="" />
             <path id="phasePath" class="phase-path" d="" />
-            <circle id="originDot0" class="origin-dot origin-inhale" cx="50" cy="50" r="1.5" />
-            <circle id="originDot1" class="origin-dot origin-hold-in" cx="50" cy="50" r="1.5" />
-            <circle id="originDot2" class="origin-dot origin-exhale" cx="50" cy="50" r="1.5" />
-            <circle id="originDot3" class="origin-dot origin-hold-out" cx="50" cy="50" r="1.5" />
             <circle id="progressDot" class="progress-dot" cx="50" cy="50" r="2.6" />
           </svg>
         </div>

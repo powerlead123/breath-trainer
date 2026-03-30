@@ -38,12 +38,6 @@ const dom = {
     document.getElementById("segmentPath2"),
     document.getElementById("segmentPath3")
   ],
-  originDots: [
-    document.getElementById("originDot0"),
-    document.getElementById("originDot1"),
-    document.getElementById("originDot2"),
-    document.getElementById("originDot3")
-  ],
   phasePath: document.getElementById("phasePath"),
   progressDot: document.getElementById("progressDot")
 };
@@ -60,12 +54,12 @@ const state = {
   lastMarker: "",
   audioContext: null,
   totalPathLength: 0,
-  shapePoints: [],
   theme: "light",
   wakeLock: null,
   wakeLockRequested: false,
   deferredPrompt: null,
-  customPresets: []
+  customPresets: [],
+  currentShapeMinute: -1
 };
 
 function getConfig() {
@@ -120,75 +114,109 @@ function setConfig(config) {
   resetSession();
 }
 
-function buildShapeData(config) {
-  const lengths = [
-    config.inhale,
-    Math.max(config.holdIn, 0.2),
-    config.exhale,
-    Math.max(config.holdOut, 0.2)
-  ];
+function buildShapeData(config, minuteIndex = 0) {
+  const seed = getShapeSeed(config, minuteIndex);
+  const random = createSeededRandom(seed);
+  const styleIndex = minuteIndex % 3;
+  const rawPoints =
+    styleIndex === 0 ? buildPetalPoints(random)
+    : styleIndex === 1 ? buildInkPoints(random)
+    : buildFlowPoints(random);
 
-  const adjusted = adjustLengthsForClosure(lengths);
-  const radius = solveCyclicRadius(adjusted);
-  const angles = adjusted.map((side) => 2 * Math.asin(side / (2 * radius)));
-
-  let currentAngle = -Math.PI / 2;
-  const unitPoints = [];
-  for (let i = 0; i < 4; i += 1) {
-    unitPoints.push({
-      x: Math.cos(currentAngle) * radius,
-      y: Math.sin(currentAngle) * radius
-    });
-    currentAngle += angles[i];
-  }
-
-  const points = fitPointsToViewBox(unitPoints);
-  const path = points
-    .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`)
-    .join(" ") + " Z";
-
+  const points = fitPointsToViewBox(rawPoints);
   return {
-    path,
-    points,
-    adjustedLengths: adjusted
+    path: buildClosedSplinePath(points)
   };
 }
 
-function adjustLengthsForClosure(lengths) {
-  const sorted = [...lengths].sort((a, b) => b - a);
-  if (sorted[0] < sorted[1] + sorted[2] + sorted[3]) {
-    return lengths;
+function buildPetalPoints(random) {
+  const count = 96;
+  const petals = 4 + Math.floor(random() * 4);
+  const twist = 0.5 + random() * 0.75;
+  const points = [];
+
+  for (let index = 0; index < count; index += 1) {
+    const t = index / count;
+    const angle = -Math.PI / 2 + t * Math.PI * 2;
+    const bloom = 0.62 + 0.28 * Math.sin(angle * petals + twist);
+    const innerRipple = 0.1 * Math.sin(angle * petals * 2 - twist * 0.6);
+    const radius = 28 + (bloom + innerRipple) * 16 + random() * 1.2;
+    const stretchX = 0.92 + random() * 0.18;
+    const stretchY = 0.92 + random() * 0.2;
+    points.push({
+      x: Math.cos(angle) * radius * stretchX,
+      y: Math.sin(angle) * radius * stretchY
+    });
   }
 
-  const maxIndex = lengths.indexOf(Math.max(...lengths));
-  const sumOthers = lengths.reduce((sum, value, index) => sum + (index === maxIndex ? 0 : value), 0);
-  const adjusted = [...lengths];
-  adjusted[maxIndex] = Math.max(sumOthers - 0.1, 0.2);
-  return adjusted;
+  return points;
 }
 
-function solveCyclicRadius(lengths) {
-  let low = Math.max(...lengths) / 2 + 0.0001;
-  let high = low * 2;
+function buildInkPoints(random) {
+  const count = 84;
+  const lobes = 5 + Math.floor(random() * 3);
+  const smear = 0.18 + random() * 0.18;
+  const points = [];
 
-  while (angleSum(high, lengths) > Math.PI * 2) {
-    high *= 2;
+  for (let index = 0; index < count; index += 1) {
+    const t = index / count;
+    const angle = -Math.PI / 2 + t * Math.PI * 2;
+    const pulseA = Math.sin(angle * lobes + random() * 0.12);
+    const pulseB = Math.sin(angle * (lobes + 2) - 1.2);
+    const radius = 26 + pulseA * 8 + pulseB * 5 + Math.sin(angle * 2.3) * 4;
+    const driftX = Math.cos(angle * 3.1) * smear * 18;
+    const driftY = Math.sin(angle * 2.7) * smear * 16;
+    points.push({
+      x: Math.cos(angle) * radius + driftX,
+      y: Math.sin(angle) * radius + driftY
+    });
   }
 
-  for (let i = 0; i < 80; i += 1) {
-    const mid = (low + high) / 2;
-    if (angleSum(mid, lengths) > Math.PI * 2) {
-      low = mid;
-    } else {
-      high = mid;
-    }
-  }
-
-  return high;
+  return points;
 }
 
-function angleSum(radius, lengths) {
-  return lengths.reduce((sum, side) => sum + 2 * Math.asin(Math.min(0.999999, side / (2 * radius))), 0);
+function buildFlowPoints(random) {
+  const count = 90;
+  const waves = 3 + Math.floor(random() * 3);
+  const swirl = 0.65 + random() * 0.5;
+  const points = [];
+
+  for (let index = 0; index < count; index += 1) {
+    const t = index / count;
+    const angle = -Math.PI / 2 + t * Math.PI * 2;
+    const longWave = Math.sin(angle * waves - swirl) * 10;
+    const shortWave = Math.cos(angle * (waves + 2) + swirl * 1.7) * 4.5;
+    const radius = 29 + longWave + shortWave;
+    const curl = 5.5 * Math.sin(angle * 2 + swirl);
+    points.push({
+      x: Math.cos(angle) * radius + Math.cos(angle * 1.5) * curl,
+      y: Math.sin(angle) * radius + Math.sin(angle * 1.2) * curl * 0.9
+    });
+  }
+
+  return points;
+}
+
+function getShapeSeed(config, minuteIndex) {
+  return (
+    config.inhale * 92821 +
+    config.holdIn * 68917 +
+    config.exhale * 51787 +
+    config.holdOut * 39119 +
+    config.stopMinutes * 1237 +
+    minuteIndex * 104729
+  ) >>> 0;
+}
+
+function createSeededRandom(seed) {
+  let value = seed || 1;
+  return function next() {
+    value |= 0;
+    value = (value + 0x6D2B79F5) | 0;
+    let t = Math.imul(value ^ (value >>> 15), 1 | value);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
 }
 
 function fitPointsToViewBox(points) {
@@ -200,9 +228,9 @@ function fitPointsToViewBox(points) {
   const maxY = Math.max(...ys);
   const width = maxX - minX || 1;
   const height = maxY - minY || 1;
-  const scale = 72 / Math.max(width, height);
-  const offsetX = 50 - (minX + maxX) * scale / 2;
-  const offsetY = 50 - (minY + maxY) * scale / 2;
+  const scale = 70 / Math.max(width, height);
+  const offsetX = 50 - ((minX + maxX) / 2) * scale;
+  const offsetY = 50 - ((minY + maxY) / 2) * scale;
 
   return points.map((point) => ({
     x: point.x * scale + offsetX,
@@ -210,40 +238,48 @@ function fitPointsToViewBox(points) {
   }));
 }
 
-function updateShapePreview() {
+function buildClosedSplinePath(points) {
+  if (points.length < 2) {
+    return "M 50 50 Z";
+  }
+
+  const closed = [points[points.length - 1], ...points, points[0], points[1]];
+  let path = `M ${points[0].x.toFixed(2)} ${points[0].y.toFixed(2)}`;
+
+  for (let index = 1; index < closed.length - 2; index += 1) {
+    const previous = closed[index - 1];
+    const current = closed[index];
+    const next = closed[index + 1];
+    const afterNext = closed[index + 2];
+
+    const cp1x = current.x + (next.x - previous.x) / 6;
+    const cp1y = current.y + (next.y - previous.y) / 6;
+    const cp2x = next.x - (afterNext.x - current.x) / 6;
+    const cp2y = next.y - (afterNext.y - current.y) / 6;
+
+    path += ` C ${cp1x.toFixed(2)} ${cp1y.toFixed(2)}, ${cp2x.toFixed(2)} ${cp2y.toFixed(2)}, ${next.x.toFixed(2)} ${next.y.toFixed(2)}`;
+  }
+
+  return `${path} Z`;
+}
+
+function updateShapePreview(minuteIndex = 0) {
   const config = getConfig();
-  const shapeData = buildShapeData(config);
+  const shapeData = buildShapeData(config, minuteIndex);
   dom.basePath.setAttribute("d", shapeData.path);
   dom.phasePath.setAttribute("d", shapeData.path);
   dom.segmentPaths.forEach((path) => path.setAttribute("d", shapeData.path));
-  state.shapePoints = shapeData.points;
+  state.currentShapeMinute = minuteIndex;
   state.totalPathLength = dom.phasePath.getTotalLength();
   updateSegmentStrokes(config);
   dom.phasePath.style.strokeDasharray = `0 ${state.totalPathLength}`;
-  updateOriginDots(shapeData.points);
   positionDotAtLength(0);
-
-  const allEqual = config.inhale === config.holdIn && config.holdIn === config.exhale && config.exhale === config.holdOut;
-  dom.shapeLabel.textContent = allEqual ? "正方形" : "闭环四边形";
-
-  const shapeAdjusted = shapeData.adjustedLengths.some((length, index) => Math.abs(length - [config.inhale, Math.max(config.holdIn, 0.2), config.exhale, Math.max(config.holdOut, 0.2)][index]) > 0.01);
-
-  dom.shapeHint.textContent = allEqual
-    ? "当前四段时长相等，因此会显示一个正方形闭环。"
-    : shapeAdjusted
-      ? "某一段时间过长时，图形会自动压缩展示比例，以保证路径保持闭环。"
-      : "四段时长会分别对应闭环图形的四条边，红线会沿同一条路径循环描边。";
+  const styleNames = ["花瓣闭环", "呼吸墨迹", "流动曲线"];
+  dom.shapeLabel.textContent = styleNames[minuteIndex % 3];
+  dom.shapeHint.textContent = `当前显示第 ${minuteIndex + 1} 分钟的${styleNames[minuteIndex % 3]}；满 1 分钟后会在下一轮呼吸完整结束时切换。`;
 
   const totalCycle = getCycleDuration(config);
   dom.cycleDuration.textContent = `${totalCycle} 秒`;
-}
-
-function updateOriginDots(points) {
-  dom.originDots.forEach((dot, index) => {
-    const point = points[index];
-    dot.setAttribute("cx", point.x.toFixed(2));
-    dot.setAttribute("cy", point.y.toFixed(2));
-  });
 }
 
 function updateSegmentStrokes(config) {
@@ -278,6 +314,7 @@ function startSession() {
   state.isRunning = true;
   state.startedAt = performance.now();
   state.lastMarker = "";
+  state.currentShapeMinute = -1;
   tick();
 }
 
@@ -295,6 +332,7 @@ function resetSession() {
   pauseSession();
   state.pausedElapsedMs = 0;
   state.lastMarker = "";
+  state.currentShapeMinute = 0;
   dom.phaseChip.textContent = "待开始";
   dom.phaseChip.style.background = "";
   dom.phaseChip.style.color = "";
@@ -317,12 +355,23 @@ function tick() {
   const stopSeconds = config.stopMinutes > 0 ? config.stopMinutes * 60 : Infinity;
   const elapsedMs = state.pausedElapsedMs + (performance.now() - state.startedAt);
   const elapsedSeconds = elapsedMs / 1000;
+  const cycleIndex = Math.floor(elapsedSeconds / cycleDuration);
+  const committedMinute = Math.floor((cycleIndex * cycleDuration) / 60);
 
   if (elapsedSeconds >= stopSeconds) {
+    const finalCycleIndex = Math.floor(stopSeconds / cycleDuration);
+    const finalMinuteIndex = Math.floor((finalCycleIndex * cycleDuration) / 60);
+    if (state.currentShapeMinute !== finalMinuteIndex) {
+      updateShapePreview(finalMinuteIndex);
+    }
     applyProgress(config, stopSeconds);
     pauseSession();
     dom.phaseChip.textContent = "已完成";
     return;
+  }
+
+  if (committedMinute !== state.currentShapeMinute) {
+    updateShapePreview(committedMinute);
   }
 
   applyProgress(config, elapsedSeconds);
@@ -414,22 +463,30 @@ function playCue(phaseIndex) {
     return;
   }
 
-  const frequencies = [540, 660, 420, 660];
+  const frequencies = [560, 720, 460, 620];
   const now = state.audioContext.currentTime;
-  const oscillator = state.audioContext.createOscillator();
+  const mainOscillator = state.audioContext.createOscillator();
+  const accentOscillator = state.audioContext.createOscillator();
   const gainNode = state.audioContext.createGain();
 
-  oscillator.type = "sine";
-  oscillator.frequency.setValueAtTime(frequencies[phaseIndex] || 520, now);
+  mainOscillator.type = "sine";
+  mainOscillator.frequency.setValueAtTime(frequencies[phaseIndex] || 520, now);
+
+  accentOscillator.type = "triangle";
+  accentOscillator.frequency.setValueAtTime((frequencies[phaseIndex] || 520) * 1.5, now);
 
   gainNode.gain.setValueAtTime(0.0001, now);
-  gainNode.gain.exponentialRampToValueAtTime(0.12, now + 0.01);
-  gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.2);
+  gainNode.gain.exponentialRampToValueAtTime(0.22, now + 0.015);
+  gainNode.gain.exponentialRampToValueAtTime(0.08, now + 0.18);
+  gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.36);
 
-  oscillator.connect(gainNode);
+  mainOscillator.connect(gainNode);
+  accentOscillator.connect(gainNode);
   gainNode.connect(state.audioContext.destination);
-  oscillator.start(now);
-  oscillator.stop(now + 0.22);
+  mainOscillator.start(now);
+  accentOscillator.start(now + 0.01);
+  mainOscillator.stop(now + 0.38);
+  accentOscillator.stop(now + 0.3);
 }
 
 function loadPresets() {
