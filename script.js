@@ -46,6 +46,8 @@ const builtInPresets = [
   { id: "preset-special-love", name: "特别的爱", inhale: 4, holdIn: 4, exhale: 4, holdOut: 4, stopMinutes: 5 }
 ];
 
+const SHAPE_LIBRARY = createShapeLibrary();
+
 const state = {
   isRunning: false,
   animationFrameId: null,
@@ -116,34 +118,58 @@ function setConfig(config) {
 
 function buildShapeData(config, minuteIndex = 0) {
   const seed = getShapeSeed(config, minuteIndex);
-  const random = createSeededRandom(seed);
-  const styleIndex = minuteIndex % 3;
+  const libraryEntry = SHAPE_LIBRARY[seed % SHAPE_LIBRARY.length];
+  const random = createSeededRandom(seed ^ libraryEntry.seed);
   const rawPoints =
-    styleIndex === 0 ? buildPetalPoints(random)
-    : styleIndex === 1 ? buildInkPoints(random)
-    : buildFlowPoints(random);
+    libraryEntry.style === "petal" ? buildPetalPoints(random, libraryEntry.variant)
+    : libraryEntry.style === "ink" ? buildInkPoints(random, libraryEntry.variant)
+    : buildFlowPoints(random, libraryEntry.variant);
 
   const points = fitPointsToViewBox(rawPoints);
   return {
-    path: buildClosedSplinePath(points)
+    path: buildClosedSplinePath(points),
+    label: libraryEntry.label
   };
 }
 
-function buildPetalPoints(random) {
+function createShapeLibrary() {
+  const entries = [];
+  const styles = [
+    { style: "petal", label: "花瓣闭环" },
+    { style: "flow", label: "流动曲线" },
+    { style: "ink", label: "呼吸墨迹" }
+  ];
+
+  for (let index = 0; index < 60; index += 1) {
+    const family = styles[index % styles.length];
+    entries.push({
+      id: `shape-${index + 1}`,
+      style: family.style,
+      label: family.label,
+      seed: 7001 + index * 9973,
+      variant: Math.floor(index / styles.length)
+    });
+  }
+
+  return entries;
+}
+
+function buildPetalPoints(random, variant = 0) {
   const count = 144;
-  const petals = 4 + Math.floor(random() * 4);
+  const petals = 4 + (variant % 5);
   const phase = random() * Math.PI * 2;
-  const softness = 0.12 + random() * 0.08;
-  const stretchX = 0.92 + random() * 0.12;
-  const stretchY = 0.92 + random() * 0.12;
+  const softness = 0.1 + (variant % 4) * 0.018 + random() * 0.03;
+  const stretchX = 0.9 + ((variant * 3) % 5) * 0.025 + random() * 0.03;
+  const stretchY = 0.9 + ((variant * 5) % 5) * 0.025 + random() * 0.03;
+  const bloomBase = 0.22 + (variant % 4) * 0.025;
   const points = [];
 
   for (let index = 0; index < count; index += 1) {
     const t = index / count;
     const angle = -Math.PI / 2 + t * Math.PI * 2;
-    const bloom = 1 + 0.24 * Math.sin(angle * petals + phase);
+    const bloom = 1 + bloomBase * Math.sin(angle * petals + phase);
     const innerRipple = softness * Math.sin(angle * petals * 2 + phase * 0.6);
-    const radius = 31 + bloom * 9 + innerRipple * 10;
+    const radius = 30 + bloom * (8 + (variant % 3)) + innerRipple * 8;
     points.push({
       x: Math.cos(angle) * radius * stretchX,
       y: Math.sin(angle) * radius * stretchY
@@ -153,14 +179,16 @@ function buildPetalPoints(random) {
   return points;
 }
 
-function buildInkPoints(random) {
+function buildInkPoints(random, variant = 0) {
   const count = 132;
-  const lobeA = 3 + Math.floor(random() * 3);
+  const lobeA = 3 + (variant % 4);
   const lobeB = lobeA + 1;
   const phaseA = random() * Math.PI * 2;
   const phaseB = random() * Math.PI * 2;
-  const stretchX = 0.94 + random() * 0.14;
-  const stretchY = 0.94 + random() * 0.14;
+  const stretchX = 0.95 + ((variant * 2) % 4) * 0.025 + random() * 0.03;
+  const stretchY = 0.95 + ((variant * 3) % 4) * 0.025 + random() * 0.03;
+  const amplitudeA = 4.8 + (variant % 5) * 0.6;
+  const amplitudeB = 2.6 + (variant % 4) * 0.45;
   const points = [];
 
   for (let index = 0; index < count; index += 1) {
@@ -169,7 +197,7 @@ function buildInkPoints(random) {
     const pulseA = Math.sin(angle * lobeA + phaseA);
     const pulseB = Math.sin(angle * lobeB - phaseB);
     const pulseC = Math.cos(angle * 2 + phaseA * 0.5);
-    const radius = 30 + pulseA * 6 + pulseB * 3.5 + pulseC * 2.5;
+    const radius = 30 + pulseA * amplitudeA + pulseB * amplitudeB + pulseC * 2.2;
     points.push({
       x: Math.cos(angle) * radius * stretchX,
       y: Math.sin(angle) * radius * stretchY
@@ -179,19 +207,20 @@ function buildInkPoints(random) {
   return points;
 }
 
-function buildFlowPoints(random) {
+function buildFlowPoints(random, variant = 0) {
   const count = 140;
-  const waves = 2 + Math.floor(random() * 2);
-  const swirl = 0.45 + random() * 0.4;
+  const waves = 2 + (variant % 3);
+  const swirl = 0.4 + (variant % 5) * 0.06 + random() * 0.08;
   const phase = random() * Math.PI * 2;
-  const drift = 3 + random() * 3;
+  const drift = 2.4 + (variant % 4) * 0.55 + random() * 0.6;
+  const longAmplitude = 6 + (variant % 5) * 0.55;
   const points = [];
 
   for (let index = 0; index < count; index += 1) {
     const t = index / count;
     const angle = -Math.PI / 2 + t * Math.PI * 2;
-    const longWave = Math.sin(angle * waves + phase) * 7.5;
-    const shortWave = Math.cos(angle * (waves + 1) - phase * 0.7) * 2.8;
+    const longWave = Math.sin(angle * waves + phase) * longAmplitude;
+    const shortWave = Math.cos(angle * (waves + 1) - phase * 0.7) * (2.1 + (variant % 3) * 0.35);
     const radius = 32 + longWave + shortWave;
     const curl = drift * Math.sin(angle * 2 + swirl);
     points.push({
@@ -280,9 +309,8 @@ function updateShapePreview(minuteIndex = 0) {
   updateSegmentStrokes(config);
   dom.phasePath.style.strokeDasharray = `0 ${state.totalPathLength}`;
   positionDotAtLength(0);
-  const styleNames = ["花瓣闭环", "呼吸墨迹", "流动曲线"];
-  dom.shapeLabel.textContent = styleNames[minuteIndex % 3];
-  dom.shapeHint.textContent = `当前显示第 ${minuteIndex + 1} 分钟的${styleNames[minuteIndex % 3]}；满 1 分钟后会在下一轮呼吸完整结束时切换。`;
+  dom.shapeLabel.textContent = shapeData.label;
+  dom.shapeHint.textContent = `当前显示第 ${minuteIndex + 1} 分钟的${shapeData.label}；系统已内置 ${SHAPE_LIBRARY.length} 张平滑闭环图案，满 1 分钟后会在下一轮呼吸完整结束时切换。`;
 
   const totalCycle = getCycleDuration(config);
   dom.cycleDuration.textContent = `${totalCycle} 秒`;
